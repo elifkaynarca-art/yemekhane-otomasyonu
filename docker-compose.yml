@@ -1,0 +1,89 @@
+version: '3.8'
+
+services:
+  mysql-primary:
+    image: mysql:8.4
+    container_name: mysql-primary
+    environment:
+      MYSQL_ROOT_PASSWORD: yemekhane_kok
+      MYSQL_DATABASE: yemekhane
+      MYSQL_USER: yemekhane_app
+      MYSQL_PASSWORD: Uyg_2026
+    ports:
+      - "3307:3306"
+    volumes:
+      - ./db/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pyemekhane_kok"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  mysql-replica:
+    image: mysql:8.4
+    container_name: mysql-replica
+    environment:
+      MYSQL_ROOT_PASSWORD: yemekhane_kok
+    ports:
+      - "3308:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pyemekhane_kok"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  replica-setup:
+    image: mysql:8.4
+    container_name: replica-setup
+    depends_on:
+      mysql-primary:
+        condition: service_healthy
+      mysql-replica:
+        condition: service_healthy
+    entrypoint: ["/bin/bash", "/db/replica-setup.sh"]
+    volumes:
+      - ./db:/db
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  uygulama:
+    build: ./uygulama
+    container_name: yemekhane-uygulama
+    restart: always
+    environment:
+      PORT: 8000
+      DB_YAZMA_HOST: mysql-primary
+      DB_OKUMA_HOST: mysql-replica
+      DB_PORT: 3306
+      DB_ADI: yemekhane
+      DB_KULLANICI: yemekhane_app
+      DB_SIFRE: Uyg_2026
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    depends_on:
+      mysql-primary:
+        condition: service_healthy
+      mysql-replica:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  frontend:
+    build: ./apache
+    container_name: frontend
+    command: ["httpd-foreground", "-D", "WEBAPI"]
+    ports:
+      - "8080:80"
+    volumes:
+      - ./frontend:/usr/local/apache2/htdocs
+    depends_on:
+      - uygulama
