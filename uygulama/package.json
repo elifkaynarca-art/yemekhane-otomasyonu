@@ -1,0 +1,17 @@
+{
+  "name": "yemekhane-uygulama",
+  "version": "1.0.0",
+  "description": "Yemekhane Otomasyonu Backend Servisi",
+  "main": "src/app.js",
+  "scripts": {
+    "start": "node src/app.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "ioredis": "^5.4.1",
+    "mysql2": "^3.9.7",
+    "uuid": "^9.0.1"
+  }
+}
