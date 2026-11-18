@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kampüs Yemekhane Otomasyonu</title>
+    <link rel="stylesheet" href="css/temel.css">
+</head>
+<body>
+    <header class="navbar">
+        <h2>Yemekhane Otomasyonu</h2>
+        <div id="user-info"></div>
+    </header>
+
+    <div class="container">
+        <!-- Ekran 1: Giriş / Çıkış -->
+        <section id="sec-login" class="card">
+            <h3>Giriş Yap</h3>
+            <form id="login-form">
+                <input type="email" id="email" placeholder="E-posta" required value="ayse.demir@ogr.kampus.edu.tr">
+                <input type="password" id="password" placeholder="Şifre" required value="Yemek2026!">
+                <button type="submit">Giriş</button>
+            </form>
+            <div id="login-msg" class="hata-box"></div>
+        </section>
+
+        <!-- Ekran Navigasyonu (Mobil Uyumlu Sekmeler) -->
+        <nav id="app-nav" class="nav-tabs hidden">
+            <button onclick="tabGoster('sec-gunun-menusu')">Günün Menüsü</button>
+            <button onclick="tabGoster('sec-haftalik')">Haftalık Menü</button>
+            <button onclick="tabGoster('sec-rezervasyonlarim')">Rezervasyonlarım</button>
+            <button onclick="tabGoster('sec-bakiye')">Bakiye</button>
+            <button onclick="tabGoster('sec-profil')">Profil & Alerjen</button>
+            <button onclick="tabGoster('sec-admin')" id="admin-tab-btn" class="hidden">Yönetici Paneli</button>
+            <button onclick="cikisYap()" class="btn-danger">Çıkış</button>
+        </nav>
+
+        <!-- Ekran 2: Günün Menüsü -->
+        <section id="sec-gunun-menusu" class="card tab-content hidden">
+            <h3>Günün Menüsü</h3>
+            <div class="filter-group">
+                <select id="gm-yemekhane"><option value="1">Merkez Yemekhane</option><option value="2">Mühendislik Yemekhane</option></select>
+                <select id="gm-ogun"><option value="1">Kahvaltı</option><option value="2" selected>Öğle</option><option value="3">Akşam</option></select>
+                <button onclick="gununMenusunuGetir()">Getir</button>
+            </div>
+            <div id="gm-detay"></div>
+        </section>
+
+        <!-- Ekran 3: Haftalık Menü ve Rezervasyon -->
+        <section id="sec-haftalik" class="card tab-content hidden">
+            <h3>Haftalık Menü ve Rezervasyon Yap</h3>
+            <div id="haftalik-liste"></div>
+        </section>
+
+        <!-- Ekran 4: Rezervasyonlarım -->
+        <section id="sec-rezervasyonlarim" class="card tab-content hidden">
+            <h3>Rezervasyon Geçmişi</h3>
+            <div id="rezervasyon-liste"></div>
+        </section>
+
+        <!-- Ekran 5: Bakiye İşlemleri -->
+        <section id="sec-bakiye" class="card tab-content hidden">
+            <h3>Bakiye Yönetimi</h3>
+            <div class="bakiye-card">
+                Güncel Bakiye: <strong id="lbl-bakiye">0.00 TL</strong>
+            </div>
+            <h4>Bakiye Yükle (10 - 1000 TL)</h4>
+            <input type="number" id="txt-bakiye-tutar" min="10" max="1000" placeholder="Tutar (TL)">
+            <button onclick="bakiyeYukle()">Bakiye Yükle</button>
+            <h4>Bakiye Hareketleri</h4>
+            <ul id="bakiye-gecmisi"></ul>
+        </section>
+
+        <!-- Ekran 6: Değerlendirme & Profil (Aşama 4 Alerjen Uyarısı Dâhil) -->
+        <section id="sec-profil" class="card tab-content hidden">
+            <h3>Alerjen Tercihlerim</h3>
+            <div id="alerjen-listesi"></div>
+            <button onclick="alerjenleriKaydet()">Tercihleri Kaydet</button>
+        </section>
+
+        <!-- Ekran 7: Yönetici Paneli -->
+        <section id="sec-admin" class="card tab-content hidden">
+            <h3>Yönetici Paneli</h3>
+            <h4>Menü İstatistikleri & Doluluk</h4>
+            <div id="admin-stats"></div>
+        </section>
+    </div>
+
+    <script>
+        // JS Katmanı: Fetch API ile /api uç noktalarına istek atılır
+        let authToken = localStorage.getItem('token');
+        let currentUser = null;
+
+        async function apiFetch(url, options = {}) {
+            options.headers = options.headers || {};
+            if (authToken) options.headers['Authorization'] = authToken;
+            options.headers['Content-Type'] = 'application/json';
+            const res = await fetch('/api' + url, options);
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.hata || 'Bir hata oluştu.');
+            return data;
+        }
+
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                const res = await apiFetch('/auth/login', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        eposta: document.getElementById('email').value,
+                        sifre: document.getElementById('password').value
+                    })
+                });
+                authToken = res.token;
+                currentUser = res.kullanici;
+                localStorage.setItem('token', authToken);
+                ekraniGuncelle();
+            } catch (err) {
+                document.getElementById('login-msg').innerText = err.message;
+            }
+        });
+
+        function ekraniGuncelle() {
+            if (authToken) {
+                document.getElementById('sec-login').classList.add('hidden');
+                document.getElementById('app-nav').classList.remove('hidden');
+                tabGoster('sec-gunun-menusu');
+                if (currentUser && currentUser.rol === 'yonetici') {
+                    document.getElementById('admin-tab-btn').classList.remove('hidden');
+                }
+            }
+        }
+
+        function tabGoster(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(tabId).classList.remove('hidden');
+            if(tabId === 'sec-gunun-menusu') gununMenusunuGetir();
+        }
+
+        async function gununMenusunuGetir() {
+            const yhId = document.getElementById('gm-yemekhane').value;
+            const ogunId = document.getElementById('gm-ogun').value;
+            const bugun = new Date().toISOString().split('T')[0];
+            try {
+                const menuler = await apiFetch(`/menu/gunluk?yemekhane_id=${yhId}&tarih=${bugun}&ogun_id=${ogunId}`);
+                let html = '';
+                menuler.forEach(item => {
+                    html += `<div class="menu-item ${item.alerjen_uyarisi ? 'alerjen-warn' : ''}">
+                        <h4>${item.yemek_adi} (${item.kalori} kcal)</h4>
+                        <p>Kategori: ${item.kategori_adi} ${item.vejetaryen ? '🌱 Vejetaryen' : ''}</p>
+                        ${item.alerjen_uyarisi ? '<strong style="color:red;">⚠️ ALERJEN UYARISI! Profilinizdeki alerjenle eşleşiyor.</strong>' : ''}
+                    </div>`;
+                });
+                document.getElementById('gm-detay').innerHTML = html || 'Menü bulunamadı.';
+            } catch (err) {
+                document.getElementById('gm-detay').innerHTML = err.message;
+            }
+        }
+
+        function cikisYap() {
+            localStorage.clear();
+            location.reload();
+        }
+    </script>
+</body>
+</html>
