@@ -1,54 +1,88 @@
-version: '3.8'
-
 services:
   mysql-primary:
     image: mysql:8.4
     container_name: mysql-primary
+    command: >
+      --server-id=1
+      --log-bin=mysql-bin
+      --binlog-format=ROW
+      --gtid-mode=ON
+      --enforce-gtid-consistency=ON
+      --default-time-zone=+03:00
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
     environment:
       MYSQL_ROOT_PASSWORD: yemekhane_kok
       MYSQL_DATABASE: yemekhane
       MYSQL_USER: yemekhane_app
       MYSQL_PASSWORD: Uyg_2026
+      TZ: Europe/Istanbul
     ports:
       - "3307:3306"
     volumes:
-      - ./db/init:/docker-entrypoint-initdb.d
+      - ./db/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pyemekhane_kok"]
+      # 127.0.0.1: ilk kurulumda geçici sunucu yalnızca soketi dinler; TCP ile
+      # ping atınca init betikleri (01, 02, 04) bitmeden "healthy" olunmaz.
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -pyemekhane_kok --silent"]
       interval: 5s
       timeout: 5s
-      retries: 10
+      retries: 30
+      start_period: 20s
 
   mysql-replica:
     image: mysql:8.4
     container_name: mysql-replica
+    command: >
+      --server-id=2
+      --log-bin=mysql-bin
+      --binlog-format=ROW
+      --relay-log=relay-bin
+      --gtid-mode=ON
+      --enforce-gtid-consistency=ON
+      --default-time-zone=+03:00
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
     environment:
       MYSQL_ROOT_PASSWORD: yemekhane_kok
+      TZ: Europe/Istanbul
     ports:
       - "3308:3306"
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pyemekhane_kok"]
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -pyemekhane_kok --silent"]
       interval: 5s
       timeout: 5s
-      retries: 10
+      retries: 30
+      start_period: 20s
 
   replica-setup:
     image: mysql:8.4
     container_name: replica-setup
+    restart: "no"
     depends_on:
       mysql-primary:
         condition: service_healthy
       mysql-replica:
         condition: service_healthy
+    environment:
+      MYSQL_ROOT_PASSWORD: yemekhane_kok
+      MYSQL_DATABASE: yemekhane
+      MYSQL_USER: yemekhane_app
+      MYSQL_PASSWORD: Uyg_2026
+      REPL_USER: repl
+      REPL_PASSWORD: Repl_2026
     entrypoint: ["/bin/bash", "/db/replica-setup.sh"]
     volumes:
-      - ./db:/db
+      - ./db:/db:ro
 
   redis:
     image: redis:7-alpine
     container_name: redis
+    command: ["redis-server", "--appendonly", "yes"]
     ports:
       - "6379:6379"
+    volumes:
+      - redis-veri:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -57,10 +91,11 @@ services:
 
   uygulama:
     build: ./uygulama
-    container_name: yemekhane-uygulama
-    restart: always
+    container_name: uygulama
+    restart: unless-stopped
     environment:
       PORT: 8000
+      TZ: Europe/Istanbul
       DB_YAZMA_HOST: mysql-primary
       DB_OKUMA_HOST: mysql-replica
       DB_PORT: 3306
@@ -70,20 +105,40 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
     depends_on:
+      replica-setup:
+        condition: service_completed_successfully
       mysql-primary:
         condition: service_healthy
       mysql-replica:
         condition: service_healthy
       redis:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8000/api/saglik || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
 
   frontend:
     build: ./apache
     container_name: frontend
     command: ["httpd-foreground", "-D", "WEBAPI"]
+    environment:
+      UYGULAMA_ADRES: http://uygulama:8000
+      TZ: Europe/Istanbul
     ports:
       - "8080:80"
     volumes:
-      - ./frontend:/usr/local/apache2/htdocs
+      - ./frontend:/usr/local/apache2/htdocs:ro
     depends_on:
-      - uygulama
+      uygulama:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/saglik.txt || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  redis-veri:

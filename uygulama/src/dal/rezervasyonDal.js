@@ -1,46 +1,43 @@
-const { primaryPool, replicaPool } = require('../config/db');
+'use strict';
+const { primaryPool } = require('../config/db');
+const { yazmaIsaretle, okumaHavuzu } = require('./okumaHavuzu');
 
 class RezervasyonDal {
-  // Yazma işlemi -> primary (Procedure çağrısı)
-  static async rezervasyonYap(kullaniciId, menuId, yarimPorsiyon = false) {
-    try {
-      // Aşama 4 ile porsiyon seçimi eklendi (0: Tam, 1: Yarım)
-      const porsiyon = yarimPorsiyon ? 1 : 0;
-      const [rows] = await primaryPool.query(
-        'CALL sp_rezervasyon_yap(?, ?, ?)', 
-        [kullaniciId, menuId, porsiyon]
-      );
-      return rows[0][0]; // { rezervasyon_id, ucret, bakiye }
-    } catch (error) {
-      throw error; // Hata 45000 mesajını üst katmana fırlat
-    }
+  // Yazma -> kaynak. Para hareketi stored procedure ile yapılır (SQL yeniden yazılmaz).
+  // Yordam kendi transaction'ını yönetir; autocommit açıkken CALL edilir.
+  static async rezervasyonYap(kullaniciId, menuId, yarimPorsiyon) {
+    const [sonuc] = await primaryPool.query('CALL sp_rezervasyon_yap(?, ?, ?)', [
+      kullaniciId,
+      menuId,
+      yarimPorsiyon ? 1 : 0
+    ]);
+    await yazmaIsaretle(kullaniciId);
+    return sonuc[0][0]; // { rezervasyon_id, ucret, bakiye }
   }
 
   static async rezervasyonIptal(kullaniciId, rezervasyonId) {
-    try {
-      const [rows] = await primaryPool.query(
-        'CALL sp_rezervasyon_iptal(?, ?)', 
-        [kullaniciId, rezervasyonId]
-      );
-      return rows[0][0];
-    } catch (error) {
-      throw error;
-    }
+    const [sonuc] = await primaryPool.query('CALL sp_rezervasyon_iptal(?, ?)', [kullaniciId, rezervasyonId]);
+    await yazmaIsaretle(kullaniciId);
+    return sonuc[0][0]; // { rezervasyon_id, iade, bakiye }
   }
 
-  // Okuma işlemi -> replica
+  // Listeleme -> replika (yeni yazma yapıldıysa kaynak)
   static async kullaniciRezervasyonlari(kullaniciId) {
-    const query = `
-      SELECT r.id, r.durum, r.olusturma_tarihi, r.ucret, r.yarim_porsiyon,
-             m.tarih, o.ad AS ogun_adi, yh.ad AS yemekhane_adi
-      FROM rezervasyonlar r
-      JOIN menuler m ON r.menu_id = m.id
-      JOIN ogunler o ON m.ogun_id = o.id
-      JOIN yemekhaneler yh ON m.yemekhane_id = yh.id
-      WHERE r.kullanici_id = ?
-      ORDER BY m.tarih DESC, o.id ASC
-    `;
-    const [rows] = await replicaPool.query(query, [kullaniciId]);
+    const havuz = await okumaHavuzu(kullaniciId);
+    const [rows] = await havuz.query(
+      `SELECT r.id, r.durum, r.ucret, r.yarim_porsiyon, r.olusturma, r.kullanma_zamani, r.iptal_zamani,
+              m.id AS menu_id, m.tarih, o.id AS ogun_id, o.ad AS ogun, yh.ad AS yemekhane,
+              TIMESTAMP(m.tarih, o.son_saat) AS rezervasyon_son,
+              (r.durum = 'aktif' AND TIMESTAMP(m.tarih, o.son_saat) > NOW()) AS iptal_edilebilir
+         FROM rezervasyonlar r
+         JOIN menuler m       ON m.id  = r.menu_id
+         JOIN ogunler o       ON o.id  = m.ogun_id
+         JOIN yemekhaneler yh ON yh.id = m.yemekhane_id
+        WHERE r.kullanici_id = ?
+        ORDER BY m.tarih DESC, o.sira DESC
+        LIMIT 100`,
+      [kullaniciId]
+    );
     return rows;
   }
 }

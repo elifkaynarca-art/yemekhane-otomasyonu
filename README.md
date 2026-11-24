@@ -221,3 +221,11 @@ container'ında `TZ=Europe/Istanbul` tanımlıdır. Son saat karşılaştırmas�
 
 **Replikada yeni veri hemen görünmüyor** — Replikasyon eşzamansızdır. Bunun uygulamanızdaki
 etkisini ve çözümünü raporda açıklamanız isteniyor.
+
+## Bu depodaki uygulama (Web API)
+
+- `uygulama/` Express.js API (route → controller → dal). Yazma: `mysql-primary`, listeleme: `mysql-replica`; Redis: menü önbelleği ve oturum.
+- `frontend/` HTML5 + CSS3 + `fetch` arayüzü (`js/uygulama.js`), Apache `/api/` isteklerini uygulamaya iletir.
+- `db/init/04_degisiklik.sql` Aşama 4 migration'ı (yarım porsiyon, alerjen tercihleri).
+- `scripts/dogrula.sh` rapor için gerçek komut çıktılarını `rapor/ciktilar/` altına üretir; `rapor/Rapor_taslagi.md` rapor iskeletidir.
+- Çalıştırma: `docker compose up -d --build` → http://localhost:8080 (örnek giriş: `mehmet.yildiz@ogr.kampus.edu.tr` / `Yemek2026!`, yönetici: `leyla.arslan@kampus.edu.tr`).

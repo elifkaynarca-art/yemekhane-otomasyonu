@@ -1,0 +1,63 @@
+### Aşama 3 · Redis (23.11.2026 23:58)
+
+--- Önbelleği boşalt, aynı menüyü iki kez iste: ilki MISS (veritabanı), ikincisi HIT (Redis)
+$ docker compose exec -T redis redis-cli DEL menu:1:2026-11-25:2
+1
+
+$ docker compose logs uygulama --tail 6
+uygulama  | [REDIS] Bağlantı başarılı.
+uygulama  | [REDIS] Eski yapıdaki menü kayıtları temizlendi: 0
+uygulama  | [REDIS MISS] menu:1:2026-11-25:2 -> veritabanından (replika) okunuyor
+uygulama  | [REDIS HIT] menu:1:2026-11-23:2
+uygulama  | [REDIS MISS] menu:1:2026-11-25:2 -> veritabanından (replika) okunuyor
+uygulama  | [REDIS HIT] menu:1:2026-11-25:2
+
+$ docker compose exec -T redis redis-cli --scan --pattern menu:*
+menu:1:2026-11-23:2
+menu:1:2026-11-25:2
+
+$ docker compose exec -T redis redis-cli TTL menu:1:2026-11-25:2
+107
+
+--- Oturum anahtarı ve süresi (her istekte 1800'e yenilenir)
+$ docker compose exec -T redis redis-cli --scan --pattern oturum:*
+oturum:ca8ea7c6-877c-428f-a0e9-2b7d7238828e
+oturum:b625c361-fdd7-4478-953b-1354504d47c2
+oturum:97fcfd6e-dd54-48bc-acb7-c60c2740a67d
+oturum:0954c5f8-0216-4e40-ba49-153eed682857
+oturum:ade76a32-0025-4b9d-810b-19796be5250b
+oturum:f2feb81b-7606-4107-b1ec-d39636a2fbd4
+
+$ docker compose exec -T redis redis-cli TTL oturum:ca8ea7c6-877c-428f-a0e9-2b7d7238828e
+1799
+
+--- Yönetici menüyü değiştirir: önbellek kaydı silinir
+$ curl -X PUT /api/admin/menuler/56 -d '{"ogrenci_fiyati":31,"personel_fiyati":46,"yemek_idleri":[1,20,27,38]}'
+{"mesaj":"Menü güncellendi, önbellek temizlendi."}
+[HTTP 200]
+
+$ docker compose exec -T redis redis-cli EXISTS menu:1:2026-11-25:2
+0
+
+$ docker compose logs uygulama --tail 3
+uygulama  | [REDIS MISS] menu:1:2026-11-25:2 -> veritabanından (replika) okunuyor
+uygulama  | [REDIS HIT] menu:1:2026-11-25:2
+uygulama  | [REDIS DEL] menu:1:2026-11-25:2 (1 kayıt silindi)
+
+--- Uygulama container'ı yeniden başlar, oturum düşmez
+$ docker compose restart uygulama
+ Container uygulama Restarting 
+ Container uygulama Started 
+
+$ curl -X GET /api/auth/ben 
+{"kullanici":{"id":1,"ad":"Leyla","soyad":"Arslan","eposta":"leyla.arslan@kampus.edu.tr","rol":"yonetici"}}
+[HTTP 200]
+
+--- Çıkış: oturum anahtarı silinir
+$ curl -X POST /api/auth/logout 
+{"mesaj":"Çıkış yapıldı."}
+[HTTP 200]
+
+$ docker compose exec -T redis redis-cli EXISTS oturum:0954c5f8-0216-4e40-ba49-153eed682857
+0
+

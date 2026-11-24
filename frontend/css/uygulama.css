@@ -1,0 +1,97 @@
+/* Yemekhane Otomasyonu · uygulama stilleri (temel.css üzerine). Mobil önce; 360-400 px rahat. */
+
+[hidden] { display: none !important; }
+
+body { padding-bottom: 3rem; }
+
+.ust { background: var(--ana); color: #fff; }
+.ust-ic { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem; padding-block: 0.6rem; }
+.marka { margin: 0; font-size: var(--boyut-buyuk); }
+.kullanici-bilgi { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; font-size: var(--boyut-kucuk); }
+.rozet { background: var(--vurgu); color: var(--metin); font-weight: 700; padding: 0.15rem 0.6rem; border-radius: 999px; }
+
+main.kapsayici { padding-top: 1rem; }
+
+.kart { background: var(--yuzey); border: 1px solid var(--cizgi); border-radius: var(--kose); padding: var(--bosluk); margin-bottom: var(--bosluk); }
+.kart h2 { font-size: var(--boyut-buyuk); }
+.kart h3 { font-size: 1.05rem; margin-top: 1.25rem; }
+.soluk { color: var(--metin-soluk); font-size: var(--boyut-kucuk); }
+
+input[type="checkbox"], input[type="radio"] { width: auto; }
+textarea { resize: vertical; min-height: 4.5rem; }
+form label { margin-top: 0.6rem; }
+form > .dugme { margin-top: 0.9rem; }
+
+.dugme-ikincil { background: transparent; color: var(--ana); border: 1px solid var(--ana); }
+.dugme-ikincil:hover { background: var(--zemin); color: var(--ana-koyu); }
+.ust .dugme-ikincil { color: #fff; border-color: #fff; }
+.ust .dugme-ikincil:hover { background: rgba(255,255,255,.15); color: #fff; }
+.dugme-tehlike { background: var(--hata); }
+.dugme-tehlike:hover { background: #8c1d18; }
+.dugme-kucuk { min-height: 36px; padding: 0.3rem 0.8rem; }
+
+/* Gezinme: telefonda yana kaydırılır */
+.sekmeler { display: flex; gap: 0.4rem; overflow-x: auto; padding-bottom: 0.5rem; margin-bottom: var(--bosluk); -webkit-overflow-scrolling: touch; }
+.sekmeler button { flex: 0 0 auto; min-height: 44px; padding: 0.4rem 0.9rem; border: 1px solid var(--cizgi); border-radius: 999px; background: var(--yuzey); color: var(--metin); cursor: pointer; white-space: nowrap; }
+.sekmeler button[aria-current="true"] { background: var(--ana); border-color: var(--ana); color: #fff; font-weight: 600; }
+
+/* Filtre satırı: telefonda alt alta, geniş ekranda yan yana */
+.filtre { display: grid; gap: 0.6rem; align-items: end; margin-bottom: 0.75rem; }
+.filtre > .dugme { margin-top: 0; }
+
+/* Menü / rezervasyon kartları */
+.mini-kart { border: 1px solid var(--cizgi); border-radius: var(--kose); padding: 0.75rem; margin-bottom: 0.75rem; background: #fbfdfc; }
+.mini-kart.uyari { border-color: var(--hata); background: var(--hata-zemin); }
+.mini-baslik { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.25rem 0.75rem; align-items: baseline; margin-bottom: 0.4rem; }
+.mini-baslik strong { font-size: 1.05rem; }
+.fiyat { color: #8a5a00; font-weight: 700; }
+.meta { color: var(--metin-soluk); font-size: var(--boyut-kucuk); margin: 0 0 0.4rem; max-width: none; }
+
+.yemek-listesi { list-style: none; margin: 0.25rem 0 0.5rem; padding: 0; }
+.yemek-listesi li { padding: 0.35rem 0; border-top: 1px dashed var(--cizgi); }
+.yemek-listesi li:first-child { border-top: 0; }
+.kategori { display: block; font-size: 0.75rem; text-transform: uppercase; letter-spacing: .04em; color: var(--metin-soluk); }
+.rozet-kucuk { display: inline-block; font-size: 0.75rem; padding: 0.05rem 0.5rem; border-radius: 999px; background: var(--basari-zemin); color: var(--basari); margin-left: 0.25rem; }
+.rozet-uyari { background: var(--hata); color: #fff; font-weight: 700; }
+.rozet-durum { background: var(--zemin); color: var(--metin); }
+.durum-aktif { background: var(--basari-zemin); color: var(--basari); }
+.durum-kullanildi { background: #e8eefc; color: #234a9b; }
+.durum-iptal { background: #eee; color: #666; }
+.alerjen-metin { font-size: var(--boyut-kucuk); color: var(--metin-soluk); }
+
+.rezervasyon-satir { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin-top: 0.5rem; }
+.rezervasyon-satir select { width: auto; flex: 1 1 8rem; }
+.rezervasyon-satir .dugme { flex: 1 1 10rem; }
+
+.gun-baslik { margin: 1rem 0 0.5rem; padding-bottom: 0.25rem; border-bottom: 2px solid var(--ana); }
+
+/* Tablolar */
+table { width: 100%; border-collapse: collapse; font-size: var(--boyut-kucuk); }
+th, td { padding: 0.45rem 0.5rem; text-align: left; border-bottom: 1px solid var(--cizgi); vertical-align: top; }
+th { background: var(--zemin); white-space: nowrap; }
+td.sag, th.sag { text-align: right; white-space: nowrap; }
+.pozitif { color: var(--basari); font-weight: 600; }
+.negatif { color: var(--hata); font-weight: 600; }
+
+.bakiye-buyuk { font-size: 1.15rem; }
+
+.onay-izgara { display: grid; grid-template-columns: 1fr; gap: 0.25rem 1rem; margin-bottom: 0.5rem; }
+.onay-izgara label, .yemek-secim label { display: flex; align-items: center; gap: 0.5rem; font-weight: 400; margin: 0; min-height: 44px; }
+
+.yemek-secim { border: 1px solid var(--cizgi); border-radius: var(--kose); padding: 0.5rem 0.75rem; margin: 0.75rem 0 0; max-height: 18rem; overflow-y: auto; }
+.yemek-secim legend { font-weight: 600; padding: 0 0.4rem; }
+.yemek-secim h4 { margin: 0.6rem 0 0.1rem; font-size: 0.85rem; color: var(--metin-soluk); }
+
+.puan-form { display: grid; gap: 0.5rem; margin-top: 0.5rem; }
+
+@media (min-width: 560px) {
+  .filtre { grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); }
+  .onay-izgara { grid-template-columns: 1fr 1fr; }
+}
+@media (min-width: 800px) {
+  .onay-izgara { grid-template-columns: 1fr 1fr 1fr; }
+}
+@media (max-width: 420px) {
+  .kart { padding: 0.75rem; }
+  .ust-ic { padding-block: 0.5rem; }
+}

@@ -1,0 +1,107 @@
+### Aşama 1 · Altyapı ve replikasyon (23.11.2026 23:57)
+
+$ docker compose ps -a
+NAME            IMAGE                           COMMAND                  SERVICE         CREATED          STATUS                      PORTS
+frontend        yemekhane-otomasyonu-frontend   "httpd-foreground -D…"   frontend        16 minutes ago   Up 15 minutes (healthy)     0.0.0.0:8080->80/tcp, [::]:8080->80/tcp
+mysql-primary   mysql:8.4                       "docker-entrypoint.s…"   mysql-primary   16 minutes ago   Up 16 minutes (healthy)     0.0.0.0:3307->3306/tcp, [::]:3307->3306/tcp
+mysql-replica   mysql:8.4                       "docker-entrypoint.s…"   mysql-replica   16 minutes ago   Up 8 minutes (healthy)      0.0.0.0:3308->3306/tcp, [::]:3308->3306/tcp
+redis           redis:7-alpine                  "docker-entrypoint.s…"   redis           16 minutes ago   Up 16 minutes (healthy)     0.0.0.0:6379->6379/tcp, [::]:6379->6379/tcp
+replica-setup   mysql:8.4                       "/bin/bash /db/repli…"   replica-setup   16 minutes ago   Exited (0) 15 minutes ago   
+uygulama        yemekhane-otomasyonu-uygulama   "docker-entrypoint.s…"   uygulama        16 minutes ago   Up 8 minutes (healthy)      8000/tcp
+
+$ docker compose exec -T mysql-replica mysql -uroot -pyemekhane_kok -e SHOW REPLICA STATUS\G
+*************************** 1. row ***************************
+             Replica_IO_State: Waiting for source to send event
+                  Source_Host: mysql-primary
+                  Source_User: repl
+                  Source_Port: 3306
+                Connect_Retry: 60
+              Source_Log_File: mysql-bin.000003
+          Read_Source_Log_Pos: 7144
+               Relay_Log_File: relay-bin.000004
+                Relay_Log_Pos: 3941
+        Relay_Source_Log_File: mysql-bin.000003
+           Replica_IO_Running: Yes
+          Replica_SQL_Running: Yes
+              Replicate_Do_DB: 
+          Replicate_Ignore_DB: 
+           Replicate_Do_Table: 
+       Replicate_Ignore_Table: 
+      Replicate_Wild_Do_Table: 
+  Replicate_Wild_Ignore_Table: 
+                   Last_Errno: 0
+                   Last_Error: 
+                 Skip_Counter: 0
+          Exec_Source_Log_Pos: 7144
+              Relay_Log_Space: 7560
+              Until_Condition: None
+               Until_Log_File: 
+                Until_Log_Pos: 0
+           Source_SSL_Allowed: No
+           Source_SSL_CA_File: 
+           Source_SSL_CA_Path: 
+              Source_SSL_Cert: 
+            Source_SSL_Cipher: 
+               Source_SSL_Key: 
+        Seconds_Behind_Source: 0
+Source_SSL_Verify_Server_Cert: No
+                Last_IO_Errno: 0
+                Last_IO_Error: 
+               Last_SQL_Errno: 0
+               Last_SQL_Error: 
+  Replicate_Ignore_Server_Ids: 
+             Source_Server_Id: 1
+                  Source_UUID: 5090edaa-e77e-11f1-9898-6e61d4b60cc8
+             Source_Info_File: mysql.slave_master_info
+                    SQL_Delay: 0
+          SQL_Remaining_Delay: NULL
+    Replica_SQL_Running_State: Replica has read all relay log; waiting for more updates
+           Source_Retry_Count: 10
+                  Source_Bind: 
+      Last_IO_Error_Timestamp: 
+     Last_SQL_Error_Timestamp: 
+               Source_SSL_Crl: 
+           Source_SSL_Crlpath: 
+           Retrieved_Gtid_Set: 5090edaa-e77e-11f1-9898-6e61d4b60cc8:47-55
+            Executed_Gtid_Set: 5090edaa-e77e-11f1-9898-6e61d4b60cc8:1-55
+                Auto_Position: 1
+         Replicate_Rewrite_DB: 
+                 Channel_Name: 
+           Source_TLS_Version: 
+       Source_public_key_path: 
+        Get_Source_public_key: 1
+            Network_Namespace: 
+
+--- Kaynakta bakiye yükle, replikada gör
+$ docker compose exec -T mysql-primary mysql -uyemekhane_app -pUyg_2026 yemekhane -e CALL sp_bakiye_yukle(7, 100)
+hareket_id	bakiye
+461	715.00
+
+$ docker compose exec -T mysql-replica mysql -uyemekhane_app -pUyg_2026 yemekhane -e SELECT id, bakiye FROM kullanicilar WHERE id = 7
+id	bakiye
+7	715.00
+
+--- Replikaya yazma denemesi (ERROR 1290 beklenir)
+$ docker compose exec -T mysql-replica mysql -uyemekhane_app -pUyg_2026 yemekhane -e CALL sp_bakiye_yukle(7, 50)
+ERROR 1290 (HY000) at line 1: The MySQL server is running with the --super-read-only option so it cannot execute this statement
+
+--- Replika durdurulur, kaynakta değişiklik yapılır, replika başlatılır
+$ docker compose stop mysql-replica
+ Container mysql-replica Stopping 
+ Container mysql-replica Stopped 
+
+$ docker compose exec -T mysql-primary mysql -uyemekhane_app -pUyg_2026 yemekhane -e CALL sp_bakiye_yukle(7, 200)
+hareket_id	bakiye
+462	915.00
+
+$ docker compose start mysql-replica
+ Container mysql-replica Starting 
+ Container mysql-replica Started 
+
+$ docker compose exec -T mysql-replica mysql -uyemekhane_app -pUyg_2026 yemekhane -e SELECT id, bakiye FROM kullanicilar WHERE id = 7
+id	bakiye
+7	915.00
+
+$ docker compose exec -T redis redis-cli ping
+PONG
+

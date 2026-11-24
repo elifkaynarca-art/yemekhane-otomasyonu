@@ -1,166 +1,153 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kampüs Yemekhane Otomasyonu</title>
-    <link rel="stylesheet" href="css/temel.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kampüs Yemekhane Otomasyonu</title>
+  <link rel="stylesheet" href="/css/temel.css">
+  <link rel="stylesheet" href="/css/uygulama.css">
 </head>
 <body>
-    <header class="navbar">
-        <h2>Yemekhane Otomasyonu</h2>
-        <div id="user-info"></div>
-    </header>
-
-    <div class="container">
-        <!-- Ekran 1: Giriş / Çıkış -->
-        <section id="sec-login" class="card">
-            <h3>Giriş Yap</h3>
-            <form id="login-form">
-                <input type="email" id="email" placeholder="E-posta" required value="ayse.demir@ogr.kampus.edu.tr">
-                <input type="password" id="password" placeholder="Şifre" required value="Yemek2026!">
-                <button type="submit">Giriş</button>
-            </form>
-            <div id="login-msg" class="hata-box"></div>
-        </section>
-
-        <!-- Ekran Navigasyonu (Mobil Uyumlu Sekmeler) -->
-        <nav id="app-nav" class="nav-tabs hidden">
-            <button onclick="tabGoster('sec-gunun-menusu')">Günün Menüsü</button>
-            <button onclick="tabGoster('sec-haftalik')">Haftalık Menü</button>
-            <button onclick="tabGoster('sec-rezervasyonlarim')">Rezervasyonlarım</button>
-            <button onclick="tabGoster('sec-bakiye')">Bakiye</button>
-            <button onclick="tabGoster('sec-profil')">Profil & Alerjen</button>
-            <button onclick="tabGoster('sec-admin')" id="admin-tab-btn" class="hidden">Yönetici Paneli</button>
-            <button onclick="cikisYap()" class="btn-danger">Çıkış</button>
-        </nav>
-
-        <!-- Ekran 2: Günün Menüsü -->
-        <section id="sec-gunun-menusu" class="card tab-content hidden">
-            <h3>Günün Menüsü</h3>
-            <div class="filter-group">
-                <select id="gm-yemekhane"><option value="1">Merkez Yemekhane</option><option value="2">Mühendislik Yemekhane</option></select>
-                <select id="gm-ogun"><option value="1">Kahvaltı</option><option value="2" selected>Öğle</option><option value="3">Akşam</option></select>
-                <button onclick="gununMenusunuGetir()">Getir</button>
-            </div>
-            <div id="gm-detay"></div>
-        </section>
-
-        <!-- Ekran 3: Haftalık Menü ve Rezervasyon -->
-        <section id="sec-haftalik" class="card tab-content hidden">
-            <h3>Haftalık Menü ve Rezervasyon Yap</h3>
-            <div id="haftalik-liste"></div>
-        </section>
-
-        <!-- Ekran 4: Rezervasyonlarım -->
-        <section id="sec-rezervasyonlarim" class="card tab-content hidden">
-            <h3>Rezervasyon Geçmişi</h3>
-            <div id="rezervasyon-liste"></div>
-        </section>
-
-        <!-- Ekran 5: Bakiye İşlemleri -->
-        <section id="sec-bakiye" class="card tab-content hidden">
-            <h3>Bakiye Yönetimi</h3>
-            <div class="bakiye-card">
-                Güncel Bakiye: <strong id="lbl-bakiye">0.00 TL</strong>
-            </div>
-            <h4>Bakiye Yükle (10 - 1000 TL)</h4>
-            <input type="number" id="txt-bakiye-tutar" min="10" max="1000" placeholder="Tutar (TL)">
-            <button onclick="bakiyeYukle()">Bakiye Yükle</button>
-            <h4>Bakiye Hareketleri</h4>
-            <ul id="bakiye-gecmisi"></ul>
-        </section>
-
-        <!-- Ekran 6: Değerlendirme & Profil (Aşama 4 Alerjen Uyarısı Dâhil) -->
-        <section id="sec-profil" class="card tab-content hidden">
-            <h3>Alerjen Tercihlerim</h3>
-            <div id="alerjen-listesi"></div>
-            <button onclick="alerjenleriKaydet()">Tercihleri Kaydet</button>
-        </section>
-
-        <!-- Ekran 7: Yönetici Paneli -->
-        <section id="sec-admin" class="card tab-content hidden">
-            <h3>Yönetici Paneli</h3>
-            <h4>Menü İstatistikleri & Doluluk</h4>
-            <div id="admin-stats"></div>
-        </section>
+  <header class="ust">
+    <div class="kapsayici ust-ic">
+      <h1 class="marka">Yemekhane</h1>
+      <div id="kullanici-bilgi" class="kullanici-bilgi" hidden>
+        <span id="kb-ad"></span>
+        <span class="rozet" id="kb-bakiye"></span>
+        <button type="button" id="btn-cikis" class="dugme dugme-ikincil dugme-kucuk">Çıkış</button>
+      </div>
     </div>
+  </header>
 
-    <script>
-        // JS Katmanı: Fetch API ile /api uç noktalarına istek atılır
-        let authToken = localStorage.getItem('token');
-        let currentUser = null;
+  <main class="kapsayici">
+    <p id="bildirim" class="bildirim" role="alert" hidden></p>
 
-        async function apiFetch(url, options = {}) {
-            options.headers = options.headers || {};
-            if (authToken) options.headers['Authorization'] = authToken;
-            options.headers['Content-Type'] = 'application/json';
-            const res = await fetch('/api' + url, options);
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.hata || 'Bir hata oluştu.');
-            return data;
-        }
+    <!-- Ekran 1: Giriş -->
+    <section id="ekran-giris" class="kart" hidden>
+      <h2>Giriş Yap</h2>
+      <form id="form-giris" autocomplete="on">
+        <label for="giris-eposta">E-posta</label>
+        <input type="email" id="giris-eposta" name="eposta" required autocomplete="username" placeholder="ad.soyad@kampus.edu.tr">
+        <label for="giris-sifre">Şifre</label>
+        <input type="password" id="giris-sifre" name="sifre" required autocomplete="current-password">
+        <button type="submit" class="dugme">Giriş</button>
+      </form>
+    </section>
 
-        document.getElementById('login-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            try {
-                const res = await apiFetch('/auth/login', {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        eposta: document.getElementById('email').value,
-                        sifre: document.getElementById('password').value
-                    })
-                });
-                authToken = res.token;
-                currentUser = res.kullanici;
-                localStorage.setItem('token', authToken);
-                ekraniGuncelle();
-            } catch (err) {
-                document.getElementById('login-msg').innerText = err.message;
-            }
-        });
+    <!-- Gezinme -->
+    <nav id="sekmeler" class="sekmeler" aria-label="Ana menü" hidden>
+      <button type="button" data-ekran="gunun-menusu">Günün Menüsü</button>
+      <button type="button" data-ekran="haftalik">Haftalık Menü</button>
+      <button type="button" data-ekran="rezervasyonlarim">Rezervasyonlarım</button>
+      <button type="button" data-ekran="bakiye">Bakiye</button>
+      <button type="button" data-ekran="degerlendirme">Değerlendirme</button>
+      <button type="button" data-ekran="profil">Profil</button>
+      <button type="button" data-ekran="yonetici" id="sekme-yonetici" hidden>Yönetici</button>
+    </nav>
 
-        function ekraniGuncelle() {
-            if (authToken) {
-                document.getElementById('sec-login').classList.add('hidden');
-                document.getElementById('app-nav').classList.remove('hidden');
-                tabGoster('sec-gunun-menusu');
-                if (currentUser && currentUser.rol === 'yonetici') {
-                    document.getElementById('admin-tab-btn').classList.remove('hidden');
-                }
-            }
-        }
+    <!-- Ekran 2: Günün menüsü -->
+    <section id="ekran-gunun-menusu" class="kart ekran" hidden>
+      <h2>Günün Menüsü</h2>
+      <form id="form-gunun-menusu" class="filtre">
+        <div><label for="gm-yemekhane">Yemekhane</label><select id="gm-yemekhane"></select></div>
+        <div><label for="gm-ogun">Öğün</label><select id="gm-ogun"></select></div>
+        <div><label for="gm-tarih">Tarih</label><input type="date" id="gm-tarih"></div>
+        <button type="submit" class="dugme">Göster</button>
+      </form>
+      <div id="gm-sonuc"></div>
+    </section>
 
-        function tabGoster(tabId) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-            document.getElementById(tabId).classList.remove('hidden');
-            if(tabId === 'sec-gunun-menusu') gununMenusunuGetir();
-        }
+    <!-- Ekran 3: Haftalık menü ve rezervasyon -->
+    <section id="ekran-haftalik" class="kart ekran" hidden>
+      <h2>Haftalık Menü ve Rezervasyon</h2>
+      <div class="filtre">
+        <div><label for="hf-yemekhane">Yemekhane</label><select id="hf-yemekhane"></select></div>
+        <button type="button" id="hf-onceki" class="dugme dugme-ikincil">‹ Önceki hafta</button>
+        <button type="button" id="hf-sonraki" class="dugme dugme-ikincil">Sonraki hafta ›</button>
+      </div>
+      <p id="hf-aralik" class="soluk"></p>
+      <div id="hf-sonuc"></div>
+    </section>
 
-        async function gununMenusunuGetir() {
-            const yhId = document.getElementById('gm-yemekhane').value;
-            const ogunId = document.getElementById('gm-ogun').value;
-            const bugun = new Date().toISOString().split('T')[0];
-            try {
-                const menuler = await apiFetch(`/menu/gunluk?yemekhane_id=${yhId}&tarih=${bugun}&ogun_id=${ogunId}`);
-                let html = '';
-                menuler.forEach(item => {
-                    html += `<div class="menu-item ${item.alerjen_uyarisi ? 'alerjen-warn' : ''}">
-                        <h4>${item.yemek_adi} (${item.kalori} kcal)</h4>
-                        <p>Kategori: ${item.kategori_adi} ${item.vejetaryen ? '🌱 Vejetaryen' : ''}</p>
-                        ${item.alerjen_uyarisi ? '<strong style="color:red;">⚠️ ALERJEN UYARISI! Profilinizdeki alerjenle eşleşiyor.</strong>' : ''}
-                    </div>`;
-                });
-                document.getElementById('gm-detay').innerHTML = html || 'Menü bulunamadı.';
-            } catch (err) {
-                document.getElementById('gm-detay').innerHTML = err.message;
-            }
-        }
+    <!-- Ekran 4: Rezervasyonlarım -->
+    <section id="ekran-rezervasyonlarim" class="kart ekran" hidden>
+      <h2>Rezervasyonlarım</h2>
+      <div id="rz-sonuc"></div>
+    </section>
 
-        function cikisYap() {
-            localStorage.clear();
-            location.reload();
-        }
-    </script>
+    <!-- Ekran 5: Bakiye -->
+    <section id="ekran-bakiye" class="kart ekran" hidden>
+      <h2>Bakiye</h2>
+      <p class="bakiye-buyuk">Güncel bakiye: <strong id="bk-bakiye">—</strong></p>
+      <form id="form-bakiye" class="filtre">
+        <div><label for="bk-tutar">Yüklenecek tutar (10 – 1000 TL)</label>
+          <input type="number" id="bk-tutar" min="10" max="1000" step="0.01" inputmode="decimal" required></div>
+        <button type="submit" class="dugme">Bakiye Yükle</button>
+      </form>
+      <h3>Hareket geçmişi</h3>
+      <div id="bk-hareketler" class="tablo-kaydir"></div>
+    </section>
+
+    <!-- Ekran 6: Değerlendirme -->
+    <section id="ekran-degerlendirme" class="kart ekran" hidden>
+      <h2>Menü Değerlendirme</h2>
+      <p class="soluk">Yalnızca turnikeden geçerek kullandığınız menüleri 1–5 puanla değerlendirebilirsiniz.</p>
+      <div id="dg-sonuc"></div>
+    </section>
+
+    <!-- Profil: alerjen tercihleri (Aşama 4) -->
+    <section id="ekran-profil" class="kart ekran" hidden>
+      <h2>Profil · Alerjen Tercihlerim</h2>
+      <p class="soluk">Seçtiğiniz alerjenleri içeren yemekler menüde uyarıyla gösterilir.</p>
+      <form id="form-profil">
+        <div id="pf-liste" class="onay-izgara"></div>
+        <button type="submit" class="dugme">Tercihleri Kaydet</button>
+      </form>
+    </section>
+
+    <!-- Ekran 7: Yönetici paneli -->
+    <section id="ekran-yonetici" class="kart ekran" hidden>
+      <h2>Yönetici Paneli</h2>
+
+      <h3>Menüler · doluluk ve ortalama puan</h3>
+      <form id="form-yn-filtre" class="filtre">
+        <div><label for="yn-bas">Başlangıç</label><input type="date" id="yn-bas"></div>
+        <div><label for="yn-bit">Bitiş</label><input type="date" id="yn-bit"></div>
+        <button type="submit" class="dugme dugme-ikincil">Listele</button>
+      </form>
+      <div id="yn-liste" class="tablo-kaydir"></div>
+
+      <h3 id="yn-form-baslik">Yeni menü oluştur</h3>
+      <form id="form-menu">
+        <input type="hidden" id="mn-id">
+        <div class="filtre">
+          <div><label for="mn-yemekhane">Yemekhane</label><select id="mn-yemekhane" required></select></div>
+          <div><label for="mn-ogun">Öğün</label><select id="mn-ogun" required></select></div>
+          <div><label for="mn-tarih">Tarih</label><input type="date" id="mn-tarih" required></div>
+        </div>
+        <div class="filtre">
+          <div><label for="mn-ogr">Öğrenci fiyatı (TL)</label><input type="number" id="mn-ogr" min="0" step="0.01" required></div>
+          <div><label for="mn-per">Personel fiyatı (TL)</label><input type="number" id="mn-per" min="0" step="0.01" required></div>
+        </div>
+        <fieldset class="yemek-secim">
+          <legend>Yemekler</legend>
+          <div id="mn-yemekler"></div>
+        </fieldset>
+        <button type="submit" class="dugme" id="mn-kaydet">Menüyü Kaydet</button>
+        <button type="button" class="dugme dugme-ikincil" id="mn-iptal" hidden>Düzenlemeyi bırak</button>
+      </form>
+
+      <h3>Turnike simülasyonu</h3>
+      <p class="soluk">Rezervasyonu "kullanıldı" yapar; böylece değerlendirme ekranı denenebilir. Zaman boşsa şu an kullanılır.</p>
+      <form id="form-turnike" class="filtre">
+        <div><label for="tr-kullanici">Kullanıcı no</label><input type="number" id="tr-kullanici" min="1" required></div>
+        <div><label for="tr-yemekhane">Yemekhane</label><select id="tr-yemekhane" required></select></div>
+        <div><label for="tr-zaman">Zaman (isteğe bağlı)</label><input type="datetime-local" id="tr-zaman"></div>
+        <button type="submit" class="dugme dugme-ikincil">Geçiş yaptır</button>
+      </form>
+    </section>
+  </main>
+
+  <script src="/js/uygulama.js"></script>
 </body>
 </html>

@@ -1,0 +1,37 @@
+### Aşama 2 · Uygulama (Web API) (23.11.2026 23:58)
+
+--- Hatalı giriş
+$ curl -X POST /api/auth/login -d '{"eposta":"ayse.demir@ogr.kampus.edu.tr","sifre":"yanlis"}'
+{"hata":"E-posta veya şifre hatalı."}
+[HTTP 401]
+
+--- Günün menüsü
+$ curl -X GET /api/menu/gunluk?yemekhane_id=1&ogun_id=2&tarih=2026-11-23 
+{"bulundu":true,"menu_id":44,"tarih":"2026-11-23","yemekhane":"Merkez Yemekhane","ogun":"Öğle","rezervasyon_son":"2026-11-23 10:00:00","fiyat":40,"toplam_kalori":1110,"bos_yer":393,"alerjen_uyarisi_var":true,"yemekler":[{"yemek_id":1,"ad":"Mercimek Çorbası","kategori":"Çorba","kalori":180,"vejetaryen":true,"alerjenler":["Kereviz"],"alerjen_uyarisi":[]},{"yemek_id":14,"ad":"Karnıyarık","kategori":"Ana Yemek","kalori":390,"vejetaryen":false,"alerjenler":[],"alerjen_uyarisi":[]},{"yemek_id":23,"ad":"Şehriyeli Pilav","kategori":"Yardımcı Yemek","kalori":340,"vejetaryen":true,"alerjenler":["Gluten","Süt"],"alerjen_uyarisi":["Süt"]},{"yemek_id":34,"ad":"Piyaz","kategori":"Salata ve Meze","kalori":200,"vejetaryen":true,"alerjenler":["Yumurta"],"alerjen_uyarisi":[]}]}
+[HTTP 200]
+
+--- Yetersiz bakiye (Ayşe 12,50 TL): yordamın Türkçe mesajı arayüze aynen gider
+$ curl -X POST /api/rezervasyon/yap -d '{"menu_id":56}'
+{"hata":"Bakiye yetersiz."}
+[HTTP 400]
+
+--- Başarılı rezervasyon (bakiye kaynaktan okunur)
+$ curl -X POST /api/rezervasyon/yap -d '{"menu_id":56}'
+{"hata":"Bu menü için zaten rezervasyonunuz var."}
+[HTTP 400]
+
+--- Aynı menüye tekrar rezervasyon
+$ curl -X POST /api/rezervasyon/yap -d '{"menu_id":56}'
+{"hata":"Bu menü için zaten rezervasyonunuz var."}
+[HTTP 400]
+
+--- Bakiye yükleme sınırı (10-1000 TL)
+$ curl -X POST /api/bakiye/yukle -d '{"tutar":5}'
+{"hata":"Yükleme tutarı 10 ile 1000 TL arasında olmalıdır."}
+[HTTP 400]
+
+--- Oturumsuz istek
+$ curl -X GET /api/rezervasyon 
+{"hata":"Oturum açmanız gerekmektedir."}
+[HTTP 401]
+
